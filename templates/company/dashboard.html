@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Company Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0">Company Dashboard</h3>
+    <a class="btn btn-primary" href="{{ url_for('company.create_drive') }}">Create New Drive</a>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <h5 class="mb-1">{{ company.company_name }}</h5>
+        <p class="mb-1 text-muted">Industry: {{ company.industry }}</p>
+        <p class="mb-0 text-muted">Approval Status: <strong>{{ company.approval_status|upper }}</strong></p>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header bg-white"><strong>My Placement Drives</strong></div>
+    <div class="table-responsive">
+        <table class="table align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Title</th>
+                    <th>Deadline</th>
+                    <th>Status</th>
+                    <th>Applicants</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for drive in drives %}
+                <tr>
+                    <td>{{ drive.id }}</td>
+                    <td>{{ drive.title }}</td>
+                    <td>{{ drive.application_deadline }}</td>
+                    <td>
+                        <span class="badge text-bg-{{ 'warning' if drive.status == 'pending' else 'success' if drive.status == 'approved' else 'danger' if drive.status == 'rejected' else 'secondary' }}">
+                            {{ drive.status|upper }}
+                        </span>
+                    </td>
+                    <td>{{ applicant_count_map.get(drive.id, 0) }}</td>
+                    <td>
+                        <div class="d-flex flex-wrap gap-1">
+                            <a class="btn btn-sm btn-outline-primary" href="{{ url_for('company.edit_drive', drive_id=drive.id) }}">Edit</a>
+                            <a class="btn btn-sm btn-outline-info" href="{{ url_for('company.drive_applications', drive_id=drive.id) }}">Applications</a>
+                            <form method="post" action="{{ url_for('company.close_drive', drive_id=drive.id) }}">
+                                <button class="btn btn-sm btn-outline-secondary" type="submit">Close</button>
+                            </form>
+                            <form method="post" action="{{ url_for('company.delete_drive', drive_id=drive.id) }}">
+                                <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6" class="text-center py-3">No drives created yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

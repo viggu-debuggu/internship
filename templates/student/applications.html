@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}My Applications{% endblock %}
+
+{% block content %}
+<h3 class="mb-3">My Applications</h3>
+
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Application ID</th>
+                    <th>Drive</th>
+                    <th>Company</th>
+                    <th>Applied On</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for app in applications %}
+                <tr>
+                    <td>{{ app.id }}</td>
+                    <td>{{ app.drive.title }}</td>
+                    <td>{{ app.drive.company.company_name }}</td>
+                    <td>{{ app.application_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td><span class="badge text-bg-info text-uppercase">{{ app.status }}</span></td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5" class="text-center py-3">No applications found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

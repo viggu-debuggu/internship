@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+instance/placement_portal.db
+instance/uploads/
+.env
+.venv/

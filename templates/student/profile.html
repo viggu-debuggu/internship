@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Student Profile{% endblock %}
+
+{% block content %}
+<h3 class="mb-3">My Profile</h3>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Full Name</label>
+                    <input class="form-control" type="text" name="full_name" value="{{ student.full_name }}" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Phone</label>
+                    <input class="form-control" type="text" name="phone" value="{{ student.phone }}" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Degree</label>
+                    <input class="form-control" type="text" name="degree" value="{{ student.degree or '' }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Branch</label>
+                    <input class="form-control" type="text" name="branch" value="{{ student.branch or '' }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">CGPA</label>
+                    <input class="form-control" type="text" name="cgpa" value="{{ student.cgpa if student.cgpa is not none else '' }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Graduation Year</label>
+                    <input class="form-control" type="text" name="graduation_year" value="{{ student.graduation_year if student.graduation_year else '' }}">
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Skills</label>
+                    <textarea class="form-control" name="skills" rows="3">{{ student.skills or '' }}</textarea>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Upload Resume</label>
+                    <input class="form-control" type="file" name="resume" accept=".pdf,.doc,.docx">
+                    {% if student.resume_filename %}
+                        <small class="text-muted d-block mt-1">Current file: <a href="{{ url_for('main.resume_file', filename=student.resume_filename) }}" target="_blank">{{ student.resume_filename }}</a></small>
+                    {% endif %}
+                </div>
+            </div>
+            <button class="btn btn-primary mt-3" type="submit">Update Profile</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

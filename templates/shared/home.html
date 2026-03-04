@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Placement Portal | Home{% endblock %}
+
+{% block content %}
+<div class="p-4 p-md-5 mb-4 rounded-3 hero-card">
+    <div class="col-md-8">
+        <h1 class="display-6 fw-bold">Institute Placement Portal</h1>
+        <p class="lead">Centralized recruitment workflow for Admin, Companies, and Students.</p>
+        {% if not current_user %}
+            <a href="{{ url_for('auth.login') }}" class="btn btn-primary me-2">Login</a>
+            <a href="{{ url_for('auth.register_student') }}" class="btn btn-outline-primary me-2">Student Register</a>
+            <a href="{{ url_for('auth.register_company') }}" class="btn btn-outline-primary">Company Register</a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6 class="text-muted">Total Students</h6>
+                <h2>{{ stats.students }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6 class="text-muted">Total Companies</h6>
+                <h2>{{ stats.companies }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6 class="text-muted">Total Drives</h6>
+                <h2>{{ stats.drives }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">Open Approved Placement Drives</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Company</th>
+                        <th>Title</th>
+                        <th>Deadline</th>
+                        <th>Location</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for drive in open_drives %}
+                    <tr>
+                        <td>{{ drive.id }}</td>
+                        <td>{{ drive.company.company_name }}</td>
+                        <td>{{ drive.title }}</td>
+                        <td>{{ drive.application_deadline }}</td>
+                        <td>{{ drive.location or '-' }}</td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center py-3">No open drives available.</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

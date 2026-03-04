@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Drive Applications{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0">Applications for {{ drive.title }}</h3>
+    <a class="btn btn-outline-secondary" href="{{ url_for('company.dashboard') }}">Back</a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>App ID</th>
+                    <th>Student</th>
+                    <th>Contact</th>
+                    <th>Skills</th>
+                    <th>Resume</th>
+                    <th>Status</th>
+                    <th>Update</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for app in applications %}
+                <tr>
+                    <td>{{ app.id }}</td>
+                    <td>{{ app.student.full_name }}<br><small class="text-muted">{{ app.student.roll_number }}</small></td>
+                    <td>{{ app.student.email }}<br><small class="text-muted">{{ app.student.phone }}</small></td>
+                    <td>{{ app.student.skills or '-' }}</td>
+                    <td>
+                        {% if app.student.resume_filename %}
+                            <a href="{{ url_for('main.resume_file', filename=app.student.resume_filename) }}" target="_blank">View Resume</a>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td><span class="badge text-bg-info text-uppercase">{{ app.status }}</span></td>
+                    <td>
+                        <form method="post" action="{{ url_for('company.update_application_status', application_id=app.id) }}" class="d-flex gap-2">
+                            <select name="status" class="form-select form-select-sm">
+                                <option value="applied" {% if app.status == 'applied' %}selected{% endif %}>Applied</option>
+                                <option value="shortlisted" {% if app.status == 'shortlisted' %}selected{% endif %}>Shortlisted</option>
+                                <option value="selected" {% if app.status == 'selected' %}selected{% endif %}>Selected</option>
+                                <option value="rejected" {% if app.status == 'rejected' %}selected{% endif %}>Rejected</option>
+                            </select>
+                            <button class="btn btn-sm btn-primary" type="submit">Save</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" class="text-center py-3">No applications for this drive yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

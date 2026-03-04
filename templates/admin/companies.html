@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Admin | Companies{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0">Company Management</h3>
+    <form class="d-flex" method="get">
+        <input class="form-control me-2" name="q" value="{{ search_term }}" placeholder="Search by ID, name, industry, email">
+        <button class="btn btn-outline-primary" type="submit">Search</button>
+    </form>
+</div>
+
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Industry</th>
+                    <th>Email</th>
+                    <th>Status</th>
+                    <th>Flags</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for company in companies %}
+                <tr>
+                    <td>{{ company.id }}</td>
+                    <td>{{ company.company_name }}</td>
+                    <td>{{ company.industry }}</td>
+                    <td>{{ company.email }}</td>
+                    <td>
+                        <span class="badge text-bg-{{ 'warning' if company.approval_status == 'pending' else 'success' if company.approval_status == 'approved' else 'danger' }}">
+                            {{ company.approval_status|upper }}
+                        </span>
+                    </td>
+                    <td>
+                        <div><span class="badge text-bg-{{ 'success' if company.is_active else 'secondary' }}">{{ 'ACTIVE' if company.is_active else 'INACTIVE' }}</span></div>
+                        <div class="mt-1"><span class="badge text-bg-{{ 'danger' if company.is_blacklisted else 'light' }}">{{ 'BLACKLISTED' if company.is_blacklisted else 'CLEAR' }}</span></div>
+                    </td>
+                    <td>
+                        <div class="d-flex flex-wrap gap-1">
+                            <form method="post" action="{{ url_for('admin.approve_company', company_id=company.id) }}">
+                                <button class="btn btn-sm btn-success" type="submit">Approve</button>
+                            </form>
+                            <form method="post" action="{{ url_for('admin.reject_company', company_id=company.id) }}">
+                                <button class="btn btn-sm btn-warning" type="submit">Reject</button>
+                            </form>
+                            <form method="post" action="{{ url_for('admin.toggle_company_active', company_id=company.id) }}">
+                                <button class="btn btn-sm btn-outline-secondary" type="submit">Toggle Active</button>
+                            </form>
+                            <form method="post" action="{{ url_for('admin.toggle_company_blacklist', company_id=company.id) }}">
+                                <button class="btn btn-sm btn-outline-danger" type="submit">Blacklist</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" class="text-center py-3">No companies found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

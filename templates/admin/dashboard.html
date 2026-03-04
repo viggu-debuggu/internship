@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<h3 class="mb-3">Admin Dashboard</h3>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3"><div class="card shadow-sm"><div class="card-body"><div class="text-muted">Students</div><h3>{{ stats.students }}</h3></div></div></div>
+    <div class="col-md-3"><div class="card shadow-sm"><div class="card-body"><div class="text-muted">Companies</div><h3>{{ stats.companies }}</h3></div></div></div>
+    <div class="col-md-3"><div class="card shadow-sm"><div class="card-body"><div class="text-muted">Placement Drives</div><h3>{{ stats.drives }}</h3></div></div></div>
+    <div class="col-md-3"><div class="card shadow-sm"><div class="card-body"><div class="text-muted">Applications</div><h3>{{ stats.applications }}</h3></div></div></div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6 class="text-muted">Pending Company Approvals</h6>
+                <h4>{{ stats.pending_companies }}</h4>
+                <a href="{{ url_for('admin.companies') }}" class="btn btn-sm btn-outline-primary">Review Companies</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6 class="text-muted">Pending Drive Approvals</h6>
+                <h4>{{ stats.pending_drives }}</h4>
+                <a href="{{ url_for('admin.drives') }}" class="btn btn-sm btn-outline-primary">Review Drives</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6 class="text-muted">Placement Records</h6>
+                <h4>{{ stats.placements }}</h4>
+                <a href="{{ url_for('admin.placements') }}" class="btn btn-sm btn-outline-primary">View Placements</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header bg-white"><strong>Quick Management</strong></div>
+    <div class="card-body d-flex gap-2 flex-wrap">
+        <a class="btn btn-outline-primary" href="{{ url_for('admin.companies') }}">Manage Companies</a>
+        <a class="btn btn-outline-primary" href="{{ url_for('admin.students') }}">Manage Students</a>
+        <a class="btn btn-outline-primary" href="{{ url_for('admin.drives') }}">Manage Drives</a>
+        <a class="btn btn-outline-primary" href="{{ url_for('admin.applications') }}">View Applications</a>
+        <a class="btn btn-outline-primary" href="{{ url_for('admin.placements') }}">View Placements</a>
+    </div>
+</div>
+{% endblock %}

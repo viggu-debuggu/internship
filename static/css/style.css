@@ -1,0 +1,29 @@
+:root {
+    --primary: #1f4fa3;
+    --surface: #ffffff;
+    --muted: #f2f5fa;
+}
+
+body {
+    min-height: 100vh;
+}
+
+.hero-card {
+    background: linear-gradient(135deg, #f6f9ff 0%, #e9f1ff 100%);
+    border: 1px solid #dfe7f7;
+}
+
+.card {
+    border: 1px solid #e8edf5;
+}
+
+.table thead th {
+    background-color: var(--muted);
+    font-size: 0.88rem;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.badge {
+    font-weight: 600;
+}

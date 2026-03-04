@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-5 col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white"><h5 class="mb-0">Login</h5></div>
+            <div class="card-body">
+                <form method="post">
+                    <div class="mb-3">
+                        <label class="form-label">Role</label>
+                        <select class="form-select" name="role" required>
+                            <option value="">Select role</option>
+                            <option value="admin">Admin</option>
+                            <option value="company">Company</option>
+                            <option value="student">Student</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Username / Email</label>
+                        <input class="form-control" type="text" name="identifier" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Password</label>
+                        <input class="form-control" type="password" name="password" required>
+                    </div>
+                    <button class="btn btn-primary w-100" type="submit">Login</button>
+                </form>
+                <hr>
+                <p class="mb-1">New student? <a href="{{ url_for('auth.register_student') }}">Register here</a></p>
+                <p class="mb-0">New company? <a href="{{ url_for('auth.register_company') }}">Register here</a></p>
+            </div>
+        </div>
+        <div class="mt-3 small text-muted">
+            Default admin credentials: <strong>admin / admin123</strong>
+        </div>
+    </div>
+</div>
+{% endblock %}

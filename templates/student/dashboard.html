@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Student Dashboard{% endblock %}
+
+{% block content %}
+<h3 class="mb-3">Welcome, {{ student.full_name }}</h3>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4"><div class="card shadow-sm"><div class="card-body"><div class="text-muted">Open Drives</div><h3>{{ open_drives|length }}</h3></div></div></div>
+    <div class="col-md-4"><div class="card shadow-sm"><div class="card-body"><div class="text-muted">Applications</div><h3>{{ applications|length }}</h3></div></div></div>
+    <div class="col-md-4"><div class="card shadow-sm"><div class="card-body"><div class="text-muted">Placements</div><h3>{{ placements|length }}</h3></div></div></div>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-white"><strong>Latest Open Drives</strong></div>
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead>
+                <tr><th>ID</th><th>Company</th><th>Title</th><th>Deadline</th></tr>
+            </thead>
+            <tbody>
+                {% for drive in open_drives[:5] %}
+                    <tr>
+                        <td>{{ drive.id }}</td>
+                        <td>{{ drive.company.company_name }}</td>
+                        <td>{{ drive.title }}</td>
+                        <td>{{ drive.application_deadline }}</td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="4" class="text-center py-3">No drives currently open.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header bg-white"><strong>Recent Applications</strong></div>
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead>
+                <tr><th>ID</th><th>Drive</th><th>Company</th><th>Status</th><th>Date</th></tr>
+            </thead>
+            <tbody>
+                {% for app in applications[:5] %}
+                    <tr>
+                        <td>{{ app.id }}</td>
+                        <td>{{ app.drive.title }}</td>
+                        <td>{{ app.drive.company.company_name }}</td>
+                        <td><span class="badge text-bg-info text-uppercase">{{ app.status }}</span></td>
+                        <td>{{ app.application_date.strftime('%Y-%m-%d') }}</td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="5" class="text-center py-3">No applications submitted yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
