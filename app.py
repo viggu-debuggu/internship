@@ -95,7 +95,7 @@ class Company(TimestampMixin, db.Model):
     address = db.Column(db.String(255), nullable=True)
     description = db.Column(db.Text, nullable=True)
     password_hash = db.Column(db.String(255), nullable=False)
-
+    
     approval_status = db.Column(db.String(20), default="pending", nullable=False)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     is_blacklisted = db.Column(db.Boolean, default=False, nullable=False)
@@ -679,6 +679,10 @@ def dashboard():
         "pending_companies": Company.query.filter_by(approval_status="pending").count(),
         "pending_drives": PlacementDrive.query.filter_by(status="pending").count(),
         "placements": PlacementRecord.query.count(),
+        "active_students": Student.query.filter_by(is_active=True).count(),
+        "active_companies": Company.query.filter_by(is_active=True).count(),
+        "blacklisted_students": Student.query.filter_by(is_blacklisted=True).count(),
+        "blacklisted_companies": Company.query.filter_by(is_blacklisted=True).count(),
     }
     return render_template("admin/dashboard.html", stats=stats)
 
@@ -824,12 +828,34 @@ def toggle_student_blacklist(student_id: int):
 @admin_bp.route("/drives")
 def drives():
     status_filter = request.args.get("status", "").strip().lower()
+    timeline_filter = request.args.get("timeline", "").strip().lower()
     search_term = request.args.get("q", "").strip()
 
     query = PlacementDrive.query.join(Company)
 
     if status_filter in {"pending", "approved", "rejected", "closed"}:
         query = query.filter(PlacementDrive.status == status_filter)
+
+    if timeline_filter == "upcoming":
+        query = query.filter(
+            or_(
+                PlacementDrive.drive_date >= date.today(),
+                db.and_(
+                    PlacementDrive.drive_date.is_(None),
+                    PlacementDrive.application_deadline >= date.today(),
+                ),
+            )
+        )
+    elif timeline_filter == "past":
+        query = query.filter(
+            or_(
+                PlacementDrive.drive_date < date.today(),
+                db.and_(
+                    PlacementDrive.drive_date.is_(None),
+                    PlacementDrive.application_deadline < date.today(),
+                ),
+            )
+        )
 
     if search_term:
         like_expr = f"%{search_term}%"
@@ -847,6 +873,7 @@ def drives():
         "admin/drives.html",
         drives=drives_list,
         status_filter=status_filter,
+        timeline_filter=timeline_filter,
         search_term=search_term,
     )
 
@@ -883,8 +910,33 @@ def reject_drive(drive_id: int):
 
 @admin_bp.route("/applications")
 def applications():
-    application_list = Application.query.order_by(Application.application_date.desc()).all()
-    return render_template("admin/applications.html", applications=application_list)
+    status_filter = request.args.get("status", "").strip().lower()
+    search_term = request.args.get("q", "").strip()
+
+    query = Application.query.join(Student).join(PlacementDrive).join(Company)
+
+    if status_filter in {"applied", "shortlisted", "selected", "rejected"}:
+        query = query.filter(Application.status == status_filter)
+
+    if search_term:
+        like_expr = f"%{search_term}%"
+        filters = [
+            Student.full_name.ilike(like_expr),
+            Student.roll_number.ilike(like_expr),
+            PlacementDrive.title.ilike(like_expr),
+            Company.company_name.ilike(like_expr),
+        ]
+        if search_term.isdigit():
+            filters.append(Application.id == int(search_term))
+        query = query.filter(or_(*filters))
+
+    application_list = query.order_by(Application.application_date.desc()).all()
+    return render_template(
+        "admin/applications.html",
+        applications=application_list,
+        status_filter=status_filter,
+        search_term=search_term,
+    )
 
 
 @admin_bp.route("/placements")

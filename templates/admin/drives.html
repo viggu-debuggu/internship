@@ -13,6 +13,11 @@
             <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>Rejected</option>
             <option value="closed" {% if status_filter == 'closed' %}selected{% endif %}>Closed</option>
         </select>
+        <select class="form-select" name="timeline">
+            <option value="">All Time</option>
+            <option value="upcoming" {% if timeline_filter == 'upcoming' %}selected{% endif %}>Upcoming</option>
+            <option value="past" {% if timeline_filter == 'past' %}selected{% endif %}>Past</option>
+        </select>
         <button class="btn btn-outline-primary" type="submit">Filter</button>
     </form>
 </div>
@@ -26,6 +31,7 @@
                     <th>Company</th>
                     <th>Title</th>
                     <th>Deadline</th>
+                    <th>Drive Date</th>
                     <th>Status</th>
                     <th>Actions</th>
                 </tr>
@@ -37,6 +43,7 @@
                     <td>{{ drive.company.company_name }}</td>
                     <td>{{ drive.title }}</td>
                     <td>{{ drive.application_deadline }}</td>
+                    <td>{{ drive.drive_date or '-' }}</td>
                     <td>
                         <span class="badge text-bg-{{ 'warning' if drive.status == 'pending' else 'success' if drive.status == 'approved' else 'danger' if drive.status == 'rejected' else 'secondary' }}">
                             {{ drive.status|upper }}
@@ -54,7 +61,7 @@
                     </td>
                 </tr>
                 {% else %}
-                <tr><td colspan="6" class="text-center py-3">No drives found.</td></tr>
+                <tr><td colspan="7" class="text-center py-3">No drives found.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
