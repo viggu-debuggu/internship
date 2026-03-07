@@ -17,7 +17,7 @@ from flask import (
     url_for,
 )
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import func, or_
+from sqlalchemy import func, inspect, or_
 from werkzeug.datastructures import FileStorage
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
@@ -47,6 +47,7 @@ app.config["ALLOWED_RESUME_EXTENSIONS"] = {"pdf", "doc", "docx"}
 app.config["DEFAULT_ADMIN_USERNAME"] = "admin"
 app.config["DEFAULT_ADMIN_PASSWORD"] = "admin123"
 app.config["DEFAULT_ADMIN_EMAIL"] = "admin@placement.local"
+app.config["SESSION_BOOT_TOKEN"] = datetime.utcnow().isoformat()
 
 os.makedirs(INSTANCE_DIR, exist_ok=True)
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
@@ -160,6 +161,7 @@ class PlacementDrive(TimestampMixin, db.Model):
     job_description = db.Column(db.Text, nullable=False)
     eligibility_criteria = db.Column(db.Text, nullable=False)
     required_skills = db.Column(db.Text, nullable=True)
+    experience_required = db.Column(db.String(120), nullable=True)
     salary_lpa = db.Column(db.Float, nullable=True)
     location = db.Column(db.String(120), nullable=True)
 
@@ -231,6 +233,7 @@ class PlacementRecord(TimestampMixin, db.Model):
 
 def initialize_database() -> None:
     db.create_all()
+    ensure_schema_updates()
     seed_default_admin()
 
 
@@ -254,8 +257,22 @@ def seed_default_admin() -> None:
     db.session.commit()
 
 
+def ensure_schema_updates() -> None:
+    inspector = inspect(db.engine)
+    if "placement_drives" not in inspector.get_table_names():
+        return
+
+    existing_columns = {column["name"] for column in inspector.get_columns("placement_drives")}
+    if "experience_required" not in existing_columns:
+        with db.engine.begin() as connection:
+            connection.exec_driver_sql(
+                "ALTER TABLE placement_drives ADD COLUMN experience_required VARCHAR(120)"
+            )
+
+
 def login_actor(role: str, user_id: int) -> None:
     session.clear()
+    session["_boot_token"] = app.config["SESSION_BOOT_TOKEN"]
     session["user_role"] = role
     session["user_id"] = user_id
 
@@ -403,23 +420,7 @@ student_bp = Blueprint("student", __name__, url_prefix="/student")
 
 @main_bp.route("/")
 def index():
-    open_drives = (
-        PlacementDrive.query.filter(
-            PlacementDrive.status == "approved",
-            PlacementDrive.application_deadline >= date.today(),
-        )
-        .order_by(PlacementDrive.application_deadline.asc())
-        .limit(6)
-        .all()
-    )
-
-    stats = {
-        "students": Student.query.count(),
-        "companies": Company.query.count(),
-        "drives": PlacementDrive.query.count(),
-    }
-
-    return render_template("shared/home.html", open_drives=open_drives, stats=stats)
+    return redirect(url_for("auth.login"))
 
 
 @main_bp.route("/resumes/<path:filename>")
@@ -1016,6 +1017,7 @@ def create_drive():
         job_description = request.form.get("job_description", "").strip()
         eligibility_criteria = request.form.get("eligibility_criteria", "").strip()
         required_skills = request.form.get("required_skills", "").strip()
+        experience_required = request.form.get("experience_required", "").strip()
         salary_raw = request.form.get("salary_lpa", "").strip()
         location = request.form.get("location", "").strip()
         deadline_raw = request.form.get("application_deadline", "").strip()
@@ -1051,6 +1053,7 @@ def create_drive():
             job_description=job_description,
             eligibility_criteria=eligibility_criteria,
             required_skills=required_skills or None,
+            experience_required=experience_required or None,
             salary_lpa=salary_lpa,
             location=location or None,
             application_deadline=application_deadline,
@@ -1076,6 +1079,7 @@ def edit_drive(drive_id: int):
         job_description = request.form.get("job_description", "").strip()
         eligibility_criteria = request.form.get("eligibility_criteria", "").strip()
         required_skills = request.form.get("required_skills", "").strip()
+        experience_required = request.form.get("experience_required", "").strip()
         salary_raw = request.form.get("salary_lpa", "").strip()
         location = request.form.get("location", "").strip()
         deadline_raw = request.form.get("application_deadline", "").strip()
@@ -1109,6 +1113,7 @@ def edit_drive(drive_id: int):
         drive.job_description = job_description
         drive.eligibility_criteria = eligibility_criteria
         drive.required_skills = required_skills or None
+        drive.experience_required = experience_required or None
         drive.salary_lpa = salary_lpa
         drive.location = location or None
         drive.application_deadline = application_deadline
@@ -1153,11 +1158,26 @@ def delete_drive(drive_id: int):
 def drive_applications(drive_id: int):
     company = current_company()
     drive = PlacementDrive.query.filter_by(id=drive_id, company_id=company.id).first_or_404()
-    applications = drive.applications.order_by(Application.application_date.desc()).all()
+
+    status_filter = request.args.get("status", "").strip().lower()
+    applications_query = drive.applications.order_by(Application.application_date.desc())
+    if status_filter in {"applied", "shortlisted", "selected", "rejected"}:
+        applications_query = applications_query.filter(Application.status == status_filter)
+
+    applications = applications_query.all()
+    summary = {
+        "total": drive.applications.count(),
+        "shortlisted": drive.applications.filter(Application.status == "shortlisted").count(),
+        "selected": drive.applications.filter(Application.status == "selected").count(),
+        "rejected": drive.applications.filter(Application.status == "rejected").count(),
+    }
+
     return render_template(
         "company/drive_applications.html",
         drive=drive,
         applications=applications,
+        status_filter=status_filter,
+        summary=summary,
     )
 
 
@@ -1399,6 +1419,11 @@ app.register_blueprint(student_bp)
 
 @app.before_request
 def load_current_actor():
+    boot_token = app.config["SESSION_BOOT_TOKEN"]
+    if session.get("_boot_token") != boot_token:
+        session.clear()
+        session["_boot_token"] = boot_token
+
     g.current_role = get_current_role()
     g.current_user = get_current_user()
 

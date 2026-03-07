@@ -23,6 +23,7 @@
                 <tr>
                     <th>ID</th>
                     <th>Title</th>
+                    <th>Experience</th>
                     <th>Deadline</th>
                     <th>Status</th>
                     <th>Applicants</th>
@@ -34,6 +35,7 @@
                 <tr>
                     <td>{{ drive.id }}</td>
                     <td>{{ drive.title }}</td>
+                    <td>{{ drive.experience_required or '-' }}</td>
                     <td>{{ drive.application_deadline }}</td>
                     <td>
                         <span class="badge text-bg-{{ 'warning' if drive.status == 'pending' else 'success' if drive.status == 'approved' else 'danger' if drive.status == 'rejected' else 'secondary' }}">
@@ -55,7 +57,7 @@
                     </td>
                 </tr>
                 {% else %}
-                <tr><td colspan="6" class="text-center py-3">No drives created yet.</td></tr>
+                <tr><td colspan="7" class="text-center py-3">No drives created yet.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
