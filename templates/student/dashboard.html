@@ -15,7 +15,7 @@
     <div class="table-responsive">
         <table class="table mb-0">
             <thead>
-                <tr><th>ID</th><th>Company</th><th>Title</th><th>Deadline</th></tr>
+                <tr><th>ID</th><th>Company</th><th>Title</th><th>Deadline</th><th>Action</th></tr>
             </thead>
             <tbody>
                 {% for drive in open_drives[:5] %}
@@ -24,9 +24,18 @@
                         <td>{{ drive.company.company_name }}</td>
                         <td>{{ drive.title }}</td>
                         <td>{{ drive.application_deadline }}</td>
+                        <td>
+                            {% if drive.id in applied_drive_ids %}
+                                <button class="btn btn-sm btn-secondary" disabled>Already Applied</button>
+                            {% else %}
+                                <form method="post" action="{{ url_for('student.apply_to_drive', drive_id=drive.id) }}">
+                                    <button class="btn btn-sm btn-primary" type="submit">Apply</button>
+                                </form>
+                            {% endif %}
+                        </td>
                     </tr>
                 {% else %}
-                    <tr><td colspan="4" class="text-center py-3">No drives currently open.</td></tr>
+                    <tr><td colspan="5" class="text-center py-3">No drives currently open.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
