@@ -34,28 +34,28 @@
                             <input type="password" class="form-control" name="confirm_password" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Degree</label>
-                            <input type="text" class="form-control" name="degree">
+                            <label class="form-label">Degree *</label>
+                            <input type="text" class="form-control" name="degree" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Branch</label>
-                            <input type="text" class="form-control" name="branch">
+                            <label class="form-label">Branch *</label>
+                            <input type="text" class="form-control" name="branch" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">CGPA</label>
-                            <input type="text" class="form-control" name="cgpa">
+                            <label class="form-label">CGPA *</label>
+                            <input type="number" step="0.01" min="0" max="10" class="form-control" name="cgpa" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Graduation Year</label>
-                            <input type="text" class="form-control" name="graduation_year">
+                            <label class="form-label">Graduation Year *</label>
+                            <input type="text" class="form-control" name="graduation_year" required>
                         </div>
                         <div class="col-12">
-                            <label class="form-label">Skills</label>
-                            <textarea class="form-control" rows="3" name="skills" placeholder="Python, SQL, Flask, Data Structures"></textarea>
+                            <label class="form-label">Skills *</label>
+                            <textarea class="form-control" rows="3" name="skills" placeholder="Python, SQL, Flask, Data Structures" required></textarea>
                         </div>
                         <div class="col-12">
-                            <label class="form-label">Resume (PDF/DOC/DOCX)</label>
-                            <input type="file" class="form-control" name="resume" accept=".pdf,.doc,.docx">
+                            <label class="form-label">Resume (PDF/DOC/DOCX) *</label>
+                            <input type="file" class="form-control" name="resume" accept=".pdf,.doc,.docx" required>
                         </div>
                     </div>
                     <div class="mt-4 d-flex justify-content-between">

@@ -26,7 +26,7 @@
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">CGPA</label>
-                    <input class="form-control" type="text" name="cgpa" value="{{ student.cgpa if student.cgpa is not none else '' }}">
+                    <input class="form-control" type="number" step="0.01" min="0" max="10" name="cgpa" value="{{ student.cgpa if student.cgpa is not none else '' }}">
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Graduation Year</label>

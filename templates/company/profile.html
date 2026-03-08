@@ -16,12 +16,8 @@
                     <input type="text" class="form-control" name="industry" value="{{ company.industry }}" required>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">HR Contact</label>
-                    <input type="text" class="form-control" name="hr_contact_name" value="{{ company.hr_contact_name }}" required>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Phone</label>
-                    <input type="text" class="form-control" name="phone" value="{{ company.phone }}" required>
+                    <label class="form-label">HR Contact (Mobile)</label>
+                    <input type="tel" class="form-control" name="hr_contact" value="{{ company.hr_contact }}" pattern="[0-9]{10,15}" title="Enter 10 to 15 digit mobile number" required>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Website</label>

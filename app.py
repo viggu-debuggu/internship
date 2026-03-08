@@ -89,9 +89,8 @@ class Company(TimestampMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     company_name = db.Column(db.String(150), nullable=False)
     industry = db.Column(db.String(100), nullable=False)
-    hr_contact_name = db.Column(db.String(120), nullable=False)
+    hr_contact = db.Column(db.String(20), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    phone = db.Column(db.String(20), nullable=False)
     website = db.Column(db.String(255), nullable=True)
     address = db.Column(db.String(255), nullable=True)
     description = db.Column(db.Text, nullable=True)
@@ -259,15 +258,98 @@ def seed_default_admin() -> None:
 
 def ensure_schema_updates() -> None:
     inspector = inspect(db.engine)
-    if "placement_drives" not in inspector.get_table_names():
+    table_names = set(inspector.get_table_names())
+
+    if "placement_drives" in table_names:
+        drive_columns = {column["name"] for column in inspector.get_columns("placement_drives")}
+        if "experience_required" not in drive_columns:
+            with db.engine.begin() as connection:
+                connection.exec_driver_sql(
+                    "ALTER TABLE placement_drives ADD COLUMN experience_required VARCHAR(120)"
+                )
+
+    if "companies" not in table_names:
         return
 
-    existing_columns = {column["name"] for column in inspector.get_columns("placement_drives")}
-    if "experience_required" not in existing_columns:
-        with db.engine.begin() as connection:
-            connection.exec_driver_sql(
-                "ALTER TABLE placement_drives ADD COLUMN experience_required VARCHAR(120)"
+    company_columns = {column["name"] for column in inspector.get_columns("companies")}
+    has_old_contact_fields = (
+        "hr_contact_name" in company_columns or "phone" in company_columns
+    )
+    if "hr_contact" in company_columns and not has_old_contact_fields:
+        return
+
+    if "hr_contact" in company_columns:
+        contact_expression = "hr_contact"
+    elif "hr_contact_name" in company_columns and "phone" in company_columns:
+        contact_expression = "COALESCE(NULLIF(hr_contact_name, ''), phone)"
+    elif "hr_contact_name" in company_columns:
+        contact_expression = "hr_contact_name"
+    elif "phone" in company_columns:
+        contact_expression = "phone"
+    else:
+        contact_expression = "''"
+
+    with db.engine.begin() as connection:
+        connection.exec_driver_sql("PRAGMA foreign_keys=OFF")
+        connection.exec_driver_sql(
+            """
+            CREATE TABLE companies_new (
+                id INTEGER NOT NULL PRIMARY KEY,
+                company_name VARCHAR(150) NOT NULL,
+                industry VARCHAR(100) NOT NULL,
+                hr_contact VARCHAR(20) NOT NULL,
+                email VARCHAR(120) NOT NULL UNIQUE,
+                website VARCHAR(255),
+                address VARCHAR(255),
+                description TEXT,
+                password_hash VARCHAR(255) NOT NULL,
+                approval_status VARCHAR(20) NOT NULL,
+                is_active BOOLEAN NOT NULL,
+                is_blacklisted BOOLEAN NOT NULL,
+                created_at DATETIME NOT NULL,
+                updated_at DATETIME NOT NULL
             )
+            """
+        )
+        connection.exec_driver_sql(
+            f"""
+            INSERT INTO companies_new (
+                id,
+                company_name,
+                industry,
+                hr_contact,
+                email,
+                website,
+                address,
+                description,
+                password_hash,
+                approval_status,
+                is_active,
+                is_blacklisted,
+                created_at,
+                updated_at
+            )
+            SELECT
+                id,
+                company_name,
+                industry,
+                {contact_expression},
+                email,
+                website,
+                address,
+                description,
+                password_hash,
+                approval_status,
+                is_active,
+                is_blacklisted,
+                created_at,
+                updated_at
+            FROM companies
+            """
+        )
+        connection.exec_driver_sql("DROP TABLE companies")
+        connection.exec_driver_sql("ALTER TABLE companies_new RENAME TO companies")
+        connection.exec_driver_sql("PRAGMA foreign_keys=ON")
 
 
 def login_actor(role: str, user_id: int) -> None:
@@ -301,6 +383,49 @@ def get_current_user():
         return None
 
     return db.session.get(model, user_id)
+
+
+def email_exists_any_role(
+    email: str,
+    exclude_student_id=None,
+    exclude_company_id=None,
+    exclude_admin_id=None,
+) -> bool:
+    student_query = Student.query.filter(Student.email == email)
+    if exclude_student_id is not None:
+        student_query = student_query.filter(Student.id != exclude_student_id)
+    if student_query.first() is not None:
+        return True
+
+    company_query = Company.query.filter(Company.email == email)
+    if exclude_company_id is not None:
+        company_query = company_query.filter(Company.id != exclude_company_id)
+    if company_query.first() is not None:
+        return True
+
+    admin_query = Admin.query.filter(Admin.email == email)
+    if exclude_admin_id is not None:
+        admin_query = admin_query.filter(Admin.id != exclude_admin_id)
+    if admin_query.first() is not None:
+        return True
+
+    return False
+
+
+def mobile_exists_any_role(mobile: str, exclude_student_id=None, exclude_company_id=None) -> bool:
+    student_query = Student.query.filter(Student.phone == mobile)
+    if exclude_student_id is not None:
+        student_query = student_query.filter(Student.id != exclude_student_id)
+    if student_query.first() is not None:
+        return True
+
+    company_query = Company.query.filter(Company.hr_contact == mobile)
+    if exclude_company_id is not None:
+        company_query = company_query.filter(Company.id != exclude_company_id)
+    if company_query.first() is not None:
+        return True
+
+    return False
 
 
 def login_required(view_func):
@@ -528,68 +653,85 @@ def register_student():
         cgpa_raw = request.form.get("cgpa", "").strip()
         year_raw = request.form.get("graduation_year", "").strip()
         skills = request.form.get("skills", "").strip()
+        resume = request.files.get("resume")
 
-        if not all([full_name, roll_number, email, phone, password, confirm_password]):
-            flash("Please fill all mandatory student fields.", "warning")
+        if not all(
+            [
+                full_name,
+                roll_number,
+                email,
+                phone,
+                password,
+                confirm_password,
+                degree,
+                branch,
+                cgpa_raw,
+                year_raw,
+                skills,
+            ]
+        ):
+            flash("Please fill all student fields. All fields are mandatory.", "warning")
+            return render_template("auth/register_student.html")
+
+        if resume is None or not resume.filename:
+            flash("Resume upload is mandatory.", "warning")
             return render_template("auth/register_student.html")
 
         if password != confirm_password:
             flash("Password and confirm password must match.", "warning")
             return render_template("auth/register_student.html")
 
-        if Student.query.filter_by(email=email).first() is not None:
-            flash("Email already exists for another student.", "danger")
+        if email_exists_any_role(email):
+            flash("Email already registered in the portal.", "danger")
             return render_template("auth/register_student.html")
 
         if Student.query.filter_by(roll_number=roll_number).first() is not None:
             flash("Roll number already exists.", "danger")
             return render_template("auth/register_student.html")
 
-        if Student.query.filter_by(phone=phone).first() is not None:
-            flash("Phone number already exists.", "danger")
+        if mobile_exists_any_role(phone):
+            flash("Mobile number already registered in the portal.", "danger")
             return render_template("auth/register_student.html")
 
-        cgpa = None
-        if cgpa_raw:
-            try:
-                cgpa = float(cgpa_raw)
-            except ValueError:
-                flash("CGPA must be a valid number.", "warning")
-                return render_template("auth/register_student.html")
+        try:
+            cgpa = float(cgpa_raw)
+        except ValueError:
+            flash("CGPA must be a valid number.", "warning")
+            return render_template("auth/register_student.html")
 
-        graduation_year = None
-        if year_raw:
-            try:
-                graduation_year = int(year_raw)
-            except ValueError:
-                flash("Graduation year must be a valid year.", "warning")
-                return render_template("auth/register_student.html")
+        if not 0 <= cgpa <= 10:
+            flash("CGPA must be between 0 and 10.", "warning")
+            return render_template("auth/register_student.html")
+
+        try:
+            graduation_year = int(year_raw)
+        except ValueError:
+            flash("Graduation year must be a valid year.", "warning")
+            return render_template("auth/register_student.html")
 
         student = Student(
             full_name=full_name,
             roll_number=roll_number,
             email=email,
             phone=phone,
-            degree=degree or None,
-            branch=branch or None,
+            degree=degree,
+            branch=branch,
             cgpa=cgpa,
             graduation_year=graduation_year,
-            skills=skills or None,
+            skills=skills,
         )
         student.set_password(password)
 
-        resume = request.files.get("resume")
-        if resume and resume.filename:
-            try:
-                student.resume_filename = save_resume(
-                    resume,
-                    app.config["UPLOAD_FOLDER"],
-                    app.config["ALLOWED_RESUME_EXTENSIONS"],
-                    f"student_{roll_number}",
-                )
-            except ValueError as exc:
-                flash(str(exc), "warning")
-                return render_template("auth/register_student.html")
+        try:
+            student.resume_filename = save_resume(
+                resume,
+                app.config["UPLOAD_FOLDER"],
+                app.config["ALLOWED_RESUME_EXTENSIONS"],
+                f"student_{roll_number}",
+            )
+        except ValueError as exc:
+            flash(str(exc), "warning")
+            return render_template("auth/register_student.html")
 
         db.session.add(student)
         db.session.commit()
@@ -608,35 +750,39 @@ def register_company():
     if request.method == "POST":
         company_name = request.form.get("company_name", "").strip()
         industry = request.form.get("industry", "").strip()
-        hr_contact_name = request.form.get("hr_contact_name", "").strip()
+        hr_contact = request.form.get("hr_contact", "").strip()
         email = request.form.get("email", "").strip().lower()
-        phone = request.form.get("phone", "").strip()
         website = request.form.get("website", "").strip()
         address = request.form.get("address", "").strip()
         description = request.form.get("description", "").strip()
         password = request.form.get("password", "")
         confirm_password = request.form.get("confirm_password", "")
 
-        if not all(
-            [company_name, industry, hr_contact_name, email, phone, password, confirm_password]
-        ):
+        if not all([company_name, industry, hr_contact, email, password, confirm_password]):
             flash("Please fill all mandatory company fields.", "warning")
+            return render_template("auth/register_company.html")
+
+        if not hr_contact.isdigit() or len(hr_contact) < 10:
+            flash("HR Contact must be a valid mobile number.", "warning")
             return render_template("auth/register_company.html")
 
         if password != confirm_password:
             flash("Password and confirm password must match.", "warning")
             return render_template("auth/register_company.html")
 
-        if Company.query.filter_by(email=email).first() is not None:
-            flash("Company email already registered.", "danger")
+        if email_exists_any_role(email):
+            flash("Email already registered in the portal.", "danger")
+            return render_template("auth/register_company.html")
+
+        if mobile_exists_any_role(hr_contact):
+            flash("Mobile number already registered in the portal.", "danger")
             return render_template("auth/register_company.html")
 
         company = Company(
             company_name=company_name,
             industry=industry,
-            hr_contact_name=hr_contact_name,
+            hr_contact=hr_contact,
             email=email,
-            phone=phone,
             website=website or None,
             address=address or None,
             description=description or None,
@@ -993,10 +1139,21 @@ def company_profile():
     if request.method == "POST":
         company.company_name = request.form.get("company_name", "").strip() or company.company_name
         company.industry = request.form.get("industry", "").strip() or company.industry
-        company.hr_contact_name = (
-            request.form.get("hr_contact_name", "").strip() or company.hr_contact_name
-        )
-        company.phone = request.form.get("phone", "").strip() or company.phone
+
+        hr_contact = request.form.get("hr_contact", "").strip()
+        if not hr_contact:
+            flash("HR Contact is required.", "warning")
+            return render_template("company/profile.html", company=company)
+
+        if not hr_contact.isdigit() or len(hr_contact) < 10:
+            flash("HR Contact must be a valid mobile number.", "warning")
+            return render_template("company/profile.html", company=company)
+
+        if mobile_exists_any_role(hr_contact, exclude_company_id=company.id):
+            flash("Mobile number already registered in the portal.", "danger")
+            return render_template("company/profile.html", company=company)
+
+        company.hr_contact = hr_contact
         company.website = request.form.get("website", "").strip() or None
         company.address = request.form.get("address", "").strip() or None
         company.description = request.form.get("description", "").strip() or None
@@ -1263,12 +1420,15 @@ def student_dashboard():
         .all()
     )
 
+    applied_drive_ids = {application.drive_id for application in applications}
+
     return render_template(
         "student/dashboard.html",
         student=student,
         open_drives=open_drives,
         applications=applications,
         placements=placements,
+        applied_drive_ids=applied_drive_ids,
     )
 
 
@@ -1364,7 +1524,17 @@ def student_profile():
 
     if request.method == "POST":
         student.full_name = request.form.get("full_name", "").strip() or student.full_name
-        student.phone = request.form.get("phone", "").strip() or student.phone
+
+        new_phone = request.form.get("phone", "").strip()
+        if not new_phone:
+            flash("Phone is required.", "warning")
+            return render_template("student/profile.html", student=student)
+
+        if mobile_exists_any_role(new_phone, exclude_student_id=student.id):
+            flash("Mobile number already registered in the portal.", "danger")
+            return render_template("student/profile.html", student=student)
+
+        student.phone = new_phone
         student.degree = request.form.get("degree", "").strip() or None
         student.branch = request.form.get("branch", "").strip() or None
         student.skills = request.form.get("skills", "").strip() or None
@@ -1374,10 +1544,16 @@ def student_profile():
 
         if cgpa_raw:
             try:
-                student.cgpa = float(cgpa_raw)
+                cgpa_value = float(cgpa_raw)
             except ValueError:
                 flash("CGPA must be a valid number.", "warning")
                 return render_template("student/profile.html", student=student)
+
+            if not 0 <= cgpa_value <= 10:
+                flash("CGPA must be between 0 and 10.", "warning")
+                return render_template("student/profile.html", student=student)
+
+            student.cgpa = cgpa_value
         else:
             student.cgpa = None
 
