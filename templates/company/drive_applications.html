@@ -55,17 +55,22 @@
                             -
                         {% endif %}
                     </td>
-                    <td><span class="badge text-bg-info text-uppercase">{{ app.status }}</span></td>
+                    <td><span class="badge text-bg-info text-uppercase">{{ 'accepted' if app.status == 'selected' else app.status }}</span></td>
                     <td>
-                        <form method="post" action="{{ url_for('company.update_application_status', application_id=app.id) }}" class="d-flex gap-2">
-                            <select name="status" class="form-select form-select-sm">
-                                <option value="applied" {% if app.status == 'applied' %}selected{% endif %}>Applied</option>
-                                <option value="shortlisted" {% if app.status == 'shortlisted' %}selected{% endif %}>Shortlisted</option>
-                                <option value="selected" {% if app.status == 'selected' %}selected{% endif %}>Selected</option>
-                                <option value="rejected" {% if app.status == 'rejected' %}selected{% endif %}>Rejected</option>
-                            </select>
-                            <button class="btn btn-sm btn-primary" type="submit">Save</button>
-                        </form>
+                        <div class="d-flex flex-wrap gap-1">
+                            <form method="post" action="{{ url_for('company.update_application_status', application_id=app.id) }}">
+                                <input type="hidden" name="status" value="shortlisted">
+                                <button class="btn btn-sm btn-outline-primary" type="submit" {% if app.status == 'shortlisted' %}disabled{% endif %}>Shortlist</button>
+                            </form>
+                            <form method="post" action="{{ url_for('company.update_application_status', application_id=app.id) }}">
+                                <input type="hidden" name="status" value="selected">
+                                <button class="btn btn-sm btn-outline-success" type="submit" {% if app.status == 'selected' %}disabled{% endif %}>Accept</button>
+                            </form>
+                            <form method="post" action="{{ url_for('company.update_application_status', application_id=app.id) }}">
+                                <input type="hidden" name="status" value="rejected">
+                                <button class="btn btn-sm btn-outline-danger" type="submit" {% if app.status == 'rejected' %}disabled{% endif %}>Reject</button>
+                            </form>
+                        </div>
                     </td>
                 </tr>
                 {% else %}
