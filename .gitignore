@@ -4,3 +4,6 @@ instance/placement_portal.db
 instance/uploads/
 .env
 .venv/
+.DS_Store
+**/.DS_Store
+
